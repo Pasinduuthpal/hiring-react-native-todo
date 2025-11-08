@@ -1,98 +1,123 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View, Text, FlatList, TextInput } from 'react-native';
+import TaskItem from '../../components/ui/TaskItem';
+import FloatingActionButton from '../../components/ui/FloatingActionButton';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Task = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+export default function TaskListScreen() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [inputVisible, setInputVisible] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  const handleAddTask = () => {
+    if (inputText.trim() === '') {
+      setInputVisible(false);
+      return;
+    }
+    const newTask: Task = {
+      id: Date.now().toString(),
+      title: inputText.trim(),
+      completed: false,
+    };
+    setTasks(prevTasks => [newTask, ...prevTasks]);
+    setInputText('');
+    setInputVisible(false);
+  };
+
+  const handleFabPress = () => {
+    if (inputVisible) {
+      setInputText('');
+      setInputVisible(false);
+    } else {
+      setInputVisible(true);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  };
+
+  const renderInputItem = () => {
+    if (!inputVisible) return null;
+    
+    return (
+      <View style={styles.inputContainer}>
+        <View style={styles.checkboxPlaceholder} />
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          placeholder="What do you need to do?"
+          value={inputText}
+          onChangeText={setInputText}
+          autoFocus
+          onSubmitEditing={handleAddTask}
+          returnKeyType="go"
+          blurOnSubmit={false}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+      </View>
+    );
+  };
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>tasked</Text>
+
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <TaskItem item={item} />}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={renderInputItem}
+      />
+
+      <FloatingActionButton 
+        onPress={handleFabPress}
+        isInputVisible={inputVisible}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1, 
+    backgroundColor: '#fff',
+  },
+  header: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 20,
+    paddingHorizontal: 20, 
+  },
+  listContent: {
+    paddingHorizontal: 20,
+  },
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingVertical: 12,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  checkboxPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: '#000',
+    borderWidth: 2,
+    borderColor: '#000',
+    marginRight: 15,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    paddingVertical: 12,
+    color: '#000',
   },
 });
