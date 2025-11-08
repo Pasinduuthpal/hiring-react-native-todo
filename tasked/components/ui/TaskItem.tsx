@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
     borderColor: '#000',
   },
   boxChecked: {
-    backgroundColor: '#5A8FFF',
-    borderColor: '#5A8FFF',
+    backgroundColor: '#54A7A7',
+    borderColor: '#54A7A7',
   },
   titleContainer: {
     flex: 1,

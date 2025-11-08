@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, View, Text, FlatList, TextInput } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View, Text, FlatList, TextInput, Keyboard } from 'react-native';
 import TaskItem from '../../components/ui/TaskItem';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
 
@@ -14,7 +14,23 @@ export default function TaskListScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [inputVisible, setInputVisible] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const handleAddTask = () => {
     if (inputText.trim() === '') {
@@ -101,6 +117,8 @@ export default function TaskListScreen() {
       <FloatingActionButton 
         onPress={handleFabPress}
         isInputVisible={inputVisible}
+        keyboardHeight={keyboardHeight}
+        bottomInset={insets.bottom}
       />
     </SafeAreaView>
   );

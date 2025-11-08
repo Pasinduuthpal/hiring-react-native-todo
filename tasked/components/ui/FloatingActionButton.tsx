@@ -5,11 +5,23 @@ import { Plus, X } from 'react-native-feather';
 type FabProps = {
   onPress: () => void;
   isInputVisible?: boolean;
+  keyboardHeight?: number;
+  bottomInset?: number;
 };
 
-const FloatingActionButton = ({ onPress, isInputVisible = false }: FabProps) => {
+const FloatingActionButton = ({ onPress, isInputVisible = false, keyboardHeight = 0, bottomInset = 0 }: FabProps) => {
+  const bottomPosition = keyboardHeight > 0 
+    ? keyboardHeight + bottomInset + 20 
+    : 40 + bottomInset;
+
   return (
-    <TouchableOpacity style={styles.fab} onPress={onPress}>
+    <TouchableOpacity 
+      style={[
+        styles.fab,
+        { bottom: bottomPosition }
+      ]} 
+      onPress={onPress}
+    >
       {isInputVisible ? (
         <X color="#fff" width={28} height={28} />
       ) : (
@@ -22,9 +34,8 @@ const FloatingActionButton = ({ onPress, isInputVisible = false }: FabProps) => 
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 40,
     right: 20,
-    backgroundColor: '#5A8FFF',
+    backgroundColor: '#54A7A7',
     width: 60,
     height: 60,
     borderRadius: 30,
