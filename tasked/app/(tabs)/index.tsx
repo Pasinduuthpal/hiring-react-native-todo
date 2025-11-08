@@ -63,6 +63,10 @@ export default function TaskListScreen() {
     );
   };
 
+  const handleDeleteTask = (id: string) => {
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+  };
+
   const handleFabPress = () => {
     if (inputVisible) {
       setInputText('');
@@ -108,6 +112,7 @@ export default function TaskListScreen() {
             item={item}
             onToggle={() => handleToggleTask(item.id)}
             onEdit={(newTitle: string) => handleEditTask(item.id, newTitle)}
+            onDelete={() => handleDeleteTask(item.id)}
           />
         )}
         contentContainerStyle={styles.listContent}

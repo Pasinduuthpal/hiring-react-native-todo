@@ -11,7 +11,7 @@ type FabProps = {
 
 const FloatingActionButton = ({ onPress, isInputVisible = false, keyboardHeight = 0, bottomInset = 0 }: FabProps) => {
   const bottomPosition = keyboardHeight > 0 
-    ? keyboardHeight + bottomInset + 20 
+    ? keyboardHeight + bottomInset
     : 40 + bottomInset;
 
   return (

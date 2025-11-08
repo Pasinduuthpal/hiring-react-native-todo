@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Check } from 'react-native-feather';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated } from 'react-native';
+import { Check, Trash } from 'react-native-feather';
+import { Swipeable } from 'react-native-gesture-handler';
 
 type TaskItemProps = {
   item: {
@@ -10,11 +11,13 @@ type TaskItemProps = {
   };
   onToggle: () => void;
   onEdit: (newTitle: string) => void;
+  onDelete: () => void;
 };
 
-const TaskItem = ({ item, onToggle, onEdit }: TaskItemProps) => {
+const TaskItem = ({ item, onToggle, onEdit, onDelete }: TaskItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentTitle, setCurrentTitle] = useState(item.title);
+  const swipeableRef = useRef<Swipeable>(null);
 
   useEffect(() => {
     if (!isEditing) {
@@ -31,7 +34,31 @@ const TaskItem = ({ item, onToggle, onEdit }: TaskItemProps) => {
     setIsEditing(false);
   };
 
-  return (
+  const handleDelete = () => {
+    swipeableRef.current?.close();
+    onDelete();
+  };
+
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [0, 100],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+        <Animated.View style={{ transform: [{ translateX: trans }] }}>
+          <Trash color="#fff" width={22} height={22} />
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  const TaskContent = (
     <View style={styles.itemContainer}>
       <TouchableOpacity style={styles.checkboxContainer} onPress={onToggle}>
         <View
@@ -71,6 +98,12 @@ const TaskItem = ({ item, onToggle, onEdit }: TaskItemProps) => {
       )}
     </View>
   );
+
+  return (
+    <Swipeable ref={swipeableRef} renderRightActions={renderRightActions}>
+      {TaskContent}
+    </Swipeable>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -78,6 +111,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
+    backgroundColor: '#fff',
   },
   checkboxContainer: {
     marginRight: 15,
@@ -114,6 +148,13 @@ const styles = StyleSheet.create({
   titleCompleted: {
     color: '#888',
     textDecorationLine: 'line-through',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    flex: 1,
   },
 });
 
