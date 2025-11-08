@@ -1,7 +1,21 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, View, Text, FlatList, TextInput, Keyboard, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, Animated } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  StyleSheet,
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  LayoutAnimation,
+  UIManager,
+  Animated,
+} from 'react-native';
+import { useTasks } from '../../hooks/useTasks';
+import { TaskService } from '../../services/TaskService';
+import { TaskStorage } from '../../storage/TaskStorage';
 import TaskItem from '../../components/ui/TaskItem';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
 
@@ -9,64 +23,24 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type Task = {
-  id: string;
-  title: string;
-  completed: boolean;
-};
-
-const TASKS_STORAGE_KEY = '@tasked_tasks';
+// Initialize services (could be moved to a context/provider for better DI)
+const taskStorage = new TaskStorage();
+const taskService = new TaskService(taskStorage);
 
 export default function TaskListScreen() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, addTask, toggleTask, editTask, deleteTask } = useTasks(taskService);
+
   const [inputVisible, setInputVisible] = useState(false);
   const [inputText, setInputText] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const inputOpacity = useRef(new Animated.Value(0)).current;
   const inputTranslateY = useRef(new Animated.Value(-20)).current;
 
   useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        const jsonValue = await AsyncStorage.getItem(TASKS_STORAGE_KEY);
-        if (jsonValue != null) {
-          const loadedTasks: Task[] = JSON.parse(jsonValue);
-          // Sort: incomplete tasks first, then completed tasks
-          const incompleteTasks = loadedTasks.filter(task => !task.completed);
-          const completedTasks = loadedTasks.filter(task => task.completed);
-          setTasks([...incompleteTasks, ...completedTasks]);
-        }
-      } catch (e) {
-        console.error("Failed to load tasks from storage", e);
-      } finally {
-        setIsDataLoaded(true);
-      }
-    };
-
-    loadTasks();
-  }, []);
-
-  useEffect(() => {
-    if (isDataLoaded) {
-      const saveTasks = async () => {
-        try {
-          const jsonValue = JSON.stringify(tasks);
-          await AsyncStorage.setItem(TASKS_STORAGE_KEY, jsonValue);
-        } catch (e) {
-          console.error("Failed to save tasks to storage", e);
-        }
-      };
-
-      saveTasks();
-    }
-  }, [tasks, isDataLoaded]);
-
-  useEffect(() => {
     let isKeyboardVisible = false;
-    
+
     const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
       if (!isKeyboardVisible) {
         isKeyboardVisible = true;
@@ -86,65 +60,62 @@ export default function TaskListScreen() {
     };
   }, []);
 
-  const handleAddTask = useCallback(() => {
+  const handleAddTask = async () => {
     if (inputText.trim() === '') {
       setInputVisible(false);
       return;
     }
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title: inputText.trim(),
-      completed: false,
-    };
-    setTasks(prevTasks => [newTask, ...prevTasks]);
-    setInputText('');
-    setInputVisible(false);
-  }, [inputText]);
 
-  const handleToggleTask = (id: string) => {
-    // Custom smooth animation for task movement
-    LayoutAnimation.configureNext({
-      duration: 400,
-      create: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-        property: LayoutAnimation.Properties.opacity,
-      },
-      update: {
-        type: LayoutAnimation.Types.spring,
-        springDamping: 0.7,
-        initialVelocity: 0.3,
-      },
-      delete: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-        property: LayoutAnimation.Properties.opacity,
-      },
-    });
-    
-    setTasks(prevTasks => {
-      const updatedTasks = prevTasks.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      );
-      
-      // Sort: incomplete tasks first, then completed tasks
-      const incompleteTasks = updatedTasks.filter(task => !task.completed);
-      const completedTasks = updatedTasks.filter(task => task.completed);
-      
-      return [...incompleteTasks, ...completedTasks];
-    });
+    try {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      await addTask(inputText);
+      setInputText('');
+      setInputVisible(false);
+    } catch (error) {
+      console.error('Failed to add task:', error);
+    }
   };
 
-  const handleEditTask = (id: string, newTitle: string) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === id ? { ...task, title: newTitle } : task
-      )
-    );
+  const handleToggleTask = async (id: string) => {
+    try {
+      // Custom smooth animation for task movement
+      LayoutAnimation.configureNext({
+        duration: 400,
+        create: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.spring,
+          springDamping: 0.7,
+          initialVelocity: 0.3,
+        },
+        delete: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+      });
+      await toggleTask(id);
+    } catch (error) {
+      console.error('Failed to toggle task:', error);
+    }
   };
 
-  const handleDeleteTask = (id: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+  const handleEditTask = async (id: string, newTitle: string) => {
+    try {
+      await editTask(id, newTitle);
+    } catch (error) {
+      console.error('Failed to edit task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    try {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      await deleteTask(id);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
   };
 
   useEffect(() => {
@@ -224,7 +195,7 @@ export default function TaskListScreen() {
         )}
       </Animated.View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
@@ -247,7 +218,7 @@ export default function TaskListScreen() {
         />
       </KeyboardAvoidingView>
 
-      <FloatingActionButton 
+      <FloatingActionButton
         onPress={handleFabPress}
         isInputVisible={inputVisible}
         bottomInset={insets.bottom}
@@ -258,7 +229,7 @@ export default function TaskListScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
     backgroundColor: '#fff',
   },
   keyboardAvoidingView: {

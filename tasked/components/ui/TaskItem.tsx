@@ -2,13 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated } from 'react-native';
 import { Check, Trash } from 'react-native-feather';
 import { Swipeable } from 'react-native-gesture-handler';
+import { Task } from '../../types/Task';
 
 type TaskItemProps = {
-  item: {
-    id: string;
-    title: string;
-    completed: boolean;
-  };
+  item: Task;
   onToggle: () => void;
   onEdit: (newTitle: string) => void;
   onDelete: () => void;
