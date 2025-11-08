@@ -31,6 +31,22 @@ export default function TaskListScreen() {
     setInputVisible(false);
   };
 
+  const handleToggleTask = (id: string) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
+  };
+
+  const handleEditTask = (id: string, newTitle: string) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === id ? { ...task, title: newTitle } : task
+      )
+    );
+  };
+
   const handleFabPress = () => {
     if (inputVisible) {
       setInputText('');
@@ -71,7 +87,13 @@ export default function TaskListScreen() {
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TaskItem item={item} />}
+        renderItem={({ item }) => (
+          <TaskItem
+            item={item}
+            onToggle={() => handleToggleTask(item.id)}
+            onEdit={(newTitle: string) => handleEditTask(item.id, newTitle)}
+          />
+        )}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={renderInputItem}
       />

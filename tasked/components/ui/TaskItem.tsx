@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Check } from 'react-native-feather';
 
 type TaskItemProps = {
@@ -8,12 +8,32 @@ type TaskItemProps = {
     title: string;
     completed: boolean;
   };
+  onToggle: () => void;
+  onEdit: (newTitle: string) => void;
 };
 
-const TaskItem = ({ item }: TaskItemProps) => {
+const TaskItem = ({ item, onToggle, onEdit }: TaskItemProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentTitle, setCurrentTitle] = useState(item.title);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setCurrentTitle(item.title);
+    }
+  }, [item.title, isEditing]);
+
+  const handleSave = () => {
+    if (currentTitle.trim() === '') {
+      setCurrentTitle(item.title);
+    } else {
+      onEdit(currentTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
   return (
     <View style={styles.itemContainer}>
-      <TouchableOpacity style={styles.checkboxContainer}>
+      <TouchableOpacity style={styles.checkboxContainer} onPress={onToggle}>
         <View
           style={[
             styles.box,
@@ -24,14 +44,31 @@ const TaskItem = ({ item }: TaskItemProps) => {
         </View>
       </TouchableOpacity>
 
-      <Text
-        style={[
-          styles.title,
-          item.completed ? styles.titleCompleted : styles.titleNormal,
-        ]}
-      >
-        {item.title}
-      </Text>
+      {isEditing ? (
+        <TextInput
+          style={styles.title}
+          value={currentTitle}
+          onChangeText={setCurrentTitle}
+          autoFocus
+          onBlur={handleSave}
+          onSubmitEditing={handleSave}
+          returnKeyType="go"
+        />
+      ) : (
+        <TouchableOpacity
+          style={styles.titleContainer}
+          onLongPress={() => setIsEditing(true)}
+        >
+          <Text
+            style={[
+              styles.title,
+              item.completed ? styles.titleCompleted : styles.titleNormal,
+            ]}
+          >
+            {item.title}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -61,9 +98,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#5A8FFF',
     borderColor: '#5A8FFF',
   },
+  titleContainer: {
+    flex: 1,
+    paddingVertical: 5,
+  },
   title: {
     fontSize: 16,
     fontWeight: '500',
+    color: '#000',
+    flex: 1,
   },
   titleNormal: {
     color: '#000',
