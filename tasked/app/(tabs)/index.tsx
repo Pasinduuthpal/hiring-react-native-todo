@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, View, Text, FlatList, TextInput, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, Keyboard, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TaskItem from '../../components/ui/TaskItem';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type Task = {
   id: string;
@@ -21,13 +25,19 @@ export default function TaskListScreen() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
+  const inputOpacity = useRef(new Animated.Value(0)).current;
+  const inputTranslateY = useRef(new Animated.Value(-20)).current;
 
   useEffect(() => {
     const loadTasks = async () => {
       try {
         const jsonValue = await AsyncStorage.getItem(TASKS_STORAGE_KEY);
         if (jsonValue != null) {
-          setTasks(JSON.parse(jsonValue));
+          const loadedTasks: Task[] = JSON.parse(jsonValue);
+          // Sort: incomplete tasks first, then completed tasks
+          const incompleteTasks = loadedTasks.filter(task => !task.completed);
+          const completedTasks = loadedTasks.filter(task => task.completed);
+          setTasks([...incompleteTasks, ...completedTasks]);
         }
       } catch (e) {
         console.error("Failed to load tasks from storage", e);
@@ -81,6 +91,7 @@ export default function TaskListScreen() {
       setInputVisible(false);
       return;
     }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const newTask: Task = {
       id: Date.now().toString(),
       title: inputText.trim(),
@@ -92,11 +103,35 @@ export default function TaskListScreen() {
   }, [inputText]);
 
   const handleToggleTask = (id: string) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
+    // Custom smooth animation for task movement
+    LayoutAnimation.configureNext({
+      duration: 400,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.spring,
+        springDamping: 0.7,
+        initialVelocity: 0.3,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    
+    setTasks(prevTasks => {
+      const updatedTasks = prevTasks.map(task =>
         task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+      );
+      
+      // Sort: incomplete tasks first, then completed tasks
+      const incompleteTasks = updatedTasks.filter(task => !task.completed);
+      const completedTasks = updatedTasks.filter(task => task.completed);
+      
+      return [...incompleteTasks, ...completedTasks];
+    });
   };
 
   const handleEditTask = (id: string, newTitle: string) => {
@@ -108,10 +143,44 @@ export default function TaskListScreen() {
   };
 
   const handleDeleteTask = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
   };
 
+  useEffect(() => {
+    if (inputVisible) {
+      Animated.parallel([
+        Animated.spring(inputOpacity, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 300,
+          friction: 20,
+        }),
+        Animated.spring(inputTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 300,
+          friction: 20,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(inputOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(inputTranslateY, {
+          toValue: -20,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [inputVisible, inputOpacity, inputTranslateY]);
+
   const handleFabPress = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (inputVisible) {
       setInputText('');
       setInputVisible(false);
@@ -127,22 +196,33 @@ export default function TaskListScreen() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>tasked</Text>
 
-      {inputVisible && (
-        <View style={styles.inputContainer}>
-          <View style={styles.checkboxPlaceholder} />
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="What do you need to do?"
-            value={inputText}
-            onChangeText={setInputText}
-            autoFocus
-            onSubmitEditing={handleAddTask}
-            returnKeyType="go"
-            blurOnSubmit={false}
-          />
-        </View>
-      )}
+      <Animated.View
+        style={[
+          styles.inputContainer,
+          {
+            opacity: inputOpacity,
+            transform: [{ translateY: inputTranslateY }],
+          },
+        ]}
+        pointerEvents={inputVisible ? 'auto' : 'none'}
+      >
+        {inputVisible && (
+          <>
+            <View style={styles.checkboxPlaceholder} />
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="What do you need to do?"
+              value={inputText}
+              onChangeText={setInputText}
+              autoFocus
+              onSubmitEditing={handleAddTask}
+              returnKeyType="go"
+              blurOnSubmit={false}
+            />
+          </>
+        )}
+      </Animated.View>
 
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}

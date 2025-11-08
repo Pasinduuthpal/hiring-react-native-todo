@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Plus, X } from 'react-native-feather';
 
 type FabProps = {
@@ -13,6 +13,43 @@ const FloatingActionButton = ({ onPress, isInputVisible = false, keyboardHeight 
   const bottomPosition = keyboardHeight > 0 
     ? keyboardHeight + bottomInset
     : 40 + bottomInset;
+  
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(rotateAnim, {
+        toValue: isInputVisible ? 1 : 0,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 20,
+      }),
+    ]).start();
+  }, [isInputVisible, rotateAnim]);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '90deg'],
+  });
 
   return (
     <TouchableOpacity 
@@ -21,12 +58,24 @@ const FloatingActionButton = ({ onPress, isInputVisible = false, keyboardHeight 
         { bottom: bottomPosition }
       ]} 
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={1}
     >
-      {isInputVisible ? (
-        <X color="#fff" width={28} height={28} />
-      ) : (
-        <Plus color="#fff" width={28} height={28} />
-      )}
+      <Animated.View
+        style={{
+          transform: [
+            { rotate },
+            { scale: scaleAnim },
+          ],
+        }}
+      >
+        {isInputVisible ? (
+          <X color="#fff" width={28} height={28} />
+        ) : (
+          <Plus color="#fff" width={28} height={28} />
+        )}
+      </Animated.View>
     </TouchableOpacity>
   );
 };
