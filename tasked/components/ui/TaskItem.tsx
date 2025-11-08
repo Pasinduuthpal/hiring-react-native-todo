@@ -209,7 +209,8 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
   },
   checkboxContainer: {
@@ -247,6 +248,7 @@ const styles = StyleSheet.create({
   titleCompleted: {
     color: '#888',
     textDecorationLine: 'line-through',
+    fontStyle: 'normal',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',

@@ -267,10 +267,10 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 32,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 20,
-    paddingHorizontal: 20, 
+    marginTop: 40,
+    marginBottom: 10,
+    paddingHorizontal: 40,
+    fontFamily: 'TTFirsNeue-Bold',
   },
   listContent: {
     paddingHorizontal: 20,
