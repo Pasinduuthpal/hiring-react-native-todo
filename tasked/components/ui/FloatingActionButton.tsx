@@ -5,14 +5,13 @@ import { Plus, X } from 'react-native-feather';
 type FabProps = {
   onPress: () => void;
   isInputVisible?: boolean;
-  keyboardHeight?: number;
   bottomInset?: number;
 };
 
-const FloatingActionButton = ({ onPress, isInputVisible = false, keyboardHeight = 0, bottomInset = 0 }: FabProps) => {
-  const bottomPosition = keyboardHeight > 0 
-    ? keyboardHeight + bottomInset
-    : 40 + bottomInset;
+const FloatingActionButton = ({ onPress, isInputVisible = false, bottomInset = 0 }: FabProps) => {
+  // Fixed bottom position relative to parent container
+  // The parent SafeAreaView will shrink when keyboard opens, so the button moves with it
+  const bottomPosition = 20 + bottomInset;
   
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
